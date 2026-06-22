@@ -9,6 +9,11 @@ on:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        arch:
+          - { name: arm,   pkg: gcc-arm-linux-gnueabihf,   prefix: arm-linux-gnueabihf- }
+          - { name: aarch64, pkg: gcc-aarch64-linux-gnu,   prefix: aarch64-linux-gnu- }
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc make
+          sudo apt-get install -y make ${{ matrix.arch.pkg }}
 
       - name: Fix permissions
         run: find . -type f -exec chmod +x {} +
@@ -24,18 +29,18 @@ jobs:
       - name: Configure
         run: |
           make defconfig
-          # Disable TC (traffic control) - incompatible with newer kernel headers
+          sed -i 's/CONFIG_STATIC=n/CONFIG_STATIC=y/' .config
           sed -i 's/CONFIG_TC=y/CONFIG_TC=n/' .config
           sed -i 's/CONFIG_FEATURE_TC_INGRESS=y/CONFIG_FEATURE_TC_INGRESS=n/' .config
 
       - name: Build
-        run: make -j$(nproc)
+        run: make -j$(nproc) CROSS_COMPILE=${{ matrix.arch.prefix }}
 
       - name: Strip binary
-        run: strip busybox
+        run: ${{ matrix.arch.prefix }}strip busybox
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: busybox
+          name: busybox-${{ matrix.arch.name }}
           path: busybox
