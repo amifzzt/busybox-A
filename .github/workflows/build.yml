@@ -18,6 +18,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc make
 
+      - name: Fix permissions
+        run: chmod +x scripts/*.sh
+
       - name: Configure
         run: make defconfig
 
